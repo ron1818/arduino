@@ -1,0 +1,67 @@
+///**************** GPS *****************/
+//// these two functions may not be used
+//// Interrupt is called once a millisecond, looks for any new GPS data, and stores it
+//SIGNAL(TIMER0_COMPA_vect) {
+//  char c = GPS.read();
+//  // if you want to debug, this is a good time to do it!
+//#ifdef UDR0
+//  if (GPSECHO)
+//    if (c) UDR0 = c;  
+//    // writing direct to UDR0 is much much faster than Serial.print 
+//    // but only one character can be written at a time. 
+//#endif
+//}
+//
+//void useInterrupt(boolean v) {
+//  if (v) {
+//    // Timer0 is already used for millis() - we'll just interrupt somewhere
+//    // in the middle and call the "Compare A" function above
+//    OCR0A = 0xAF;
+//    TIMSK0 |= _BV(OCIE0A);
+//    usingInterrupt = true;
+//  } else {
+//    // do not call the interrupt function COMPA anymore
+//    TIMSK0 &= ~_BV(OCIE0A);
+//    usingInterrupt = false;
+//  }
+//}
+
+
+/************** Compass *******************/
+// calibrate compass, use interrupt pin 3 on the arduino uno
+void Compass_Calibrate(void)
+{
+  char report[80];
+  compass.read();
+  
+  running_min.x = min(running_min.x, compass.m.x);
+  running_min.y = min(running_min.y, compass.m.y);
+  running_min.z = min(running_min.z, compass.m.z);
+
+  running_max.x = max(running_max.x, compass.m.x);
+  running_max.y = max(running_max.y, compass.m.y);
+  running_max.z = max(running_max.z, compass.m.z);
+  snprintf(report, sizeof(report), "min: {%+6d, %+6d, %+6d}    max: {%+6d, %+6d, %+6d}",
+  running_min.x, running_min.y, running_min.z,
+  running_max.x, running_max.y, running_max.z);
+  Serial.println(report);
+  delay(100);
+  compass.m_min=running_min;
+  compass.m_max=running_max;
+
+  M_X_MIN=running_min.x;
+  M_Y_MIN=running_min.y;
+  M_Z_MIN=running_min.z;
+  M_X_MAX=running_max.x;
+  M_Y_MAX=running_max.y;
+  M_Z_MAX=running_max.z;
+}
+
+void Compass_Calibrate_Interrupt(){
+  // LSM303 compass
+	// toggle calibrate state, whenever the interruption is toggled
+  if (iscalibrate==0)
+    iscalibrate=1;
+  else
+    iscalibrate=0;
+}

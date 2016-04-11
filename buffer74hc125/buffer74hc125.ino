@@ -1,0 +1,65 @@
+/* test of 74HC125 tri-state buffer for brushless motor and servo motor control,
+ *  74HC125:
+ *  7->GND, 14->5V
+ *  24 (Mega) -> 1, 4 output enable low
+ *  22 (Mega) -> 10, 13 output enable low
+ *  CH1Sig -> 2 (input)
+ *  CH2Sig -> 5 (input)
+ *  7 (mega) -> 9 (input)
+ *  6 (mega) -> 12 (input)
+ *  3, 11 -> servo sig (output)
+ *  6, 8 -> motor sig (output)
+ *  
+ *  TR324:
+ *  on-off-> A0 (mega)
+ */
+#include <Servo.h>
+Servo myServo;
+Servo myMotor;
+const int TR_oe=24;
+const int Mega_oe=22;
+const int servo_pwm=6;
+const int motor_pwm=7;
+const int TR_on=A0;
+int is_TR_on=0;
+int pos = 0;
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(TR_oe, OUTPUT);
+  pinMode(Mega_oe, OUTPUT);
+  myServo.attach(servo_pwm);
+  myMotor.attach(motor_pwm);
+  digitalWrite(TR_oe, LOW);
+  digitalWrite(Mega_oe, HIGH);
+  delay(50);
+
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  is_TR_on=analogRead(TR_on);
+  if(is_TR_on >100){
+    // TR is on, make TR_oe low and Mega_oe high
+    digitalWrite(TR_oe, LOW);
+    digitalWrite(Mega_oe, HIGH);
+    delay(5);
+  }else{
+    // TR is off, controlled by mega
+    digitalWrite(TR_oe, HIGH);
+    digitalWrite(Mega_oe, LOW);
+
+    for (pos = 0; pos <= 60; pos += 1) { // goes from 0 degrees to 180 degrees
+      // in steps of 1 degree
+      myServo.write(pos);
+      myMotor.write(pos); // tell servo to go to position in variable 'pos'
+      delay(50);                       // waits 15ms for the servo to reach the position
+    }
+    for (pos = 60; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
+      myMotor.write(pos); 
+      myServo.write(pos);             // tell servo to go to position in variable 'pos'
+      delay(50);                       // waits 15ms for the servo to reach the position
+    }
+  }
+
+}

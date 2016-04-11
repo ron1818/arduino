@@ -1,0 +1,115 @@
+/* function to initialize objects */
+
+// library
+#include <L3G.h>
+#include <LPS.h>
+#include <Adafruit_GPS.h>
+#include <LSM303.h>
+
+// assign pin, no need for sda and scl
+int GPS_Tx_Pin=10;
+int GPS_Rx_Pin=9;
+int statusLED=13; // onboard LED
+
+int GPS_baud=9600; 
+int Arduino_baud=9600;
+
+// define objects
+LPS ps;
+L3G gyro;
+LSM303 compass;
+
+// software serial
+SoftwareSerial mySerial(GPS_Tx_Pin, GPS_Rx_Pin); // define software serial pin map
+Adafruit_GPS GPS(&mySerial); //initialize GPS
+
+
+void Gyro_Init() // L3G
+{
+  if (!gyro.init())
+  {
+    Serial.println("Failed to autodetect L3G sensor!");
+    while (1);
+  }
+  gyro.enableDefault();
+
+  gyro.writeReg(L3G::CTRL_REG4, 0x20); // 2000 dps full scale
+  gyro.writeReg(L3G::CTRL_REG1, 0x0F); // normal power mode, all axes enabled, 100 Hz
+}
+
+void Compass_Init() // LSM303 This also initializes accelerator
+{
+  if (!compass.init())
+  {
+    Serial.println("Failed to autodetect LSM303 sensor!");
+    while (1);
+  }
+  compass.enableDefault();
+	
+  switch (compass.getDeviceType())
+  {
+    case LSM303::device_D:
+      compass.writeReg(LSM303::CTRL2, 0x18); // 8 g full scale: AFS = 011
+      break;
+    case LSM303::device_DLHC:
+      compass.writeReg(LSM303::CTRL_REG4_A, 0x28); // 8 g full scale: FS = 10; high resolution output mode
+      break;
+    default: // DLM, DLH
+      compass.writeReg(LSM303::CTRL_REG4_A, 0x30); // 8 g full scale: FS = 11
+  }
+}
+
+void Ps_Init() // initialize LPS
+{
+	// begin LPS
+  if (!ps.init())
+  {
+    Serial.println("Failed to autodetect LPS sensor!");
+    while (1);
+  }
+  ps.enableDefault();
+}
+
+
+	
+
+void Read_Gyro()
+{
+  gyro.read();
+  
+  AN[0] = gyro.g.x;
+  AN[1] = gyro.g.y;
+  AN[2] = gyro.g.z;
+  gyro_x = SENSOR_SIGN[0] * (AN[0] - AN_OFFSET[0]);
+  gyro_y = SENSOR_SIGN[1] * (AN[1] - AN_OFFSET[1]);
+  gyro_z = SENSOR_SIGN[2] * (AN[2] - AN_OFFSET[2]);
+}
+
+
+// Reads x,y and z accelerometer registers
+void Read_Accel()
+{
+  compass.readAcc();
+  
+  AN[3] = compass.a.x >> 4; // shift left 4 bits to use 12-bit representation (1 g = 256)
+  AN[4] = compass.a.y >> 4;
+  AN[5] = compass.a.z >> 4;
+  accel_x = SENSOR_SIGN[3] * (AN[3] - AN_OFFSET[3]);
+  accel_y = SENSOR_SIGN[4] * (AN[4] - AN_OFFSET[4]);
+  accel_z = SENSOR_SIGN[5] * (AN[5] - AN_OFFSET[5]);
+}
+
+void Compass_Init()
+{
+  // doesn't need to do anything because Accel_Init() should have already called compass.enableDefault()
+}
+
+void Read_Compass()
+{
+  compass.readMag();
+  
+  magnetom_x = SENSOR_SIGN[6] * compass.m.x;
+  magnetom_y = SENSOR_SIGN[7] * compass.m.y;
+  magnetom_z = SENSOR_SIGN[8] * compass.m.z;
+}
+

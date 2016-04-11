@@ -1,0 +1,127 @@
+/* output data to the serial port */
+
+void printdata(void)
+{    
+      Serial.print("!");
+
+      #if PRINT_EULER == 1
+      Serial.print("ANG:");
+      Serial.print(ToDeg(roll));
+      Serial.print(",");
+      Serial.print(ToDeg(pitch));
+      Serial.print(",");
+      Serial.print(ToDeg(yaw));
+      #endif      
+      #if PRINT_ANALOGS==1
+      Serial.print(",AN:");
+      Serial.print(AN[0]);  //(int)read_adc(0)
+      Serial.print(",");
+      Serial.print(AN[1]);
+      Serial.print(",");
+      Serial.print(AN[2]);  
+      Serial.print(",");
+      Serial.print(AN[3]);
+      Serial.print (",");
+      Serial.print(AN[4]);
+      Serial.print (",");
+      Serial.print(AN[5]);
+      Serial.print(",");
+      Serial.print(c_magnetom_x);
+      Serial.print (",");
+      Serial.print(c_magnetom_y);
+      Serial.print (",");
+      Serial.print(c_magnetom_z);
+      #endif
+      /*#if PRINT_DCM == 1
+      Serial.print (",DCM:");
+      Serial.print(convert_to_dec(DCM_Matrix[0][0]));
+      Serial.print (",");
+      Serial.print(convert_to_dec(DCM_Matrix[0][1]));
+      Serial.print (",");
+      Serial.print(convert_to_dec(DCM_Matrix[0][2]));
+      Serial.print (",");
+      Serial.print(convert_to_dec(DCM_Matrix[1][0]));
+      Serial.print (",");
+      Serial.print(convert_to_dec(DCM_Matrix[1][1]));
+      Serial.print (",");
+      Serial.print(convert_to_dec(DCM_Matrix[1][2]));
+      Serial.print (",");
+      Serial.print(convert_to_dec(DCM_Matrix[2][0]));
+      Serial.print (",");
+      Serial.print(convert_to_dec(DCM_Matrix[2][1]));
+      Serial.print (",");
+      Serial.print(convert_to_dec(DCM_Matrix[2][2]));
+      #endif*/
+      Serial.println();    
+      
+}
+
+char print_pitch_roll_NMEA(void)
+{
+	//refer to WX series manual rev.1.000 p.32 $YXXDR-B
+	//pitch and roll in degrees
+	//initialize nmea sentence
+	char nmea[160];
+
+	snprintf(nmea, sizeof(nmea),
+		"\$YXXDR,A,%.1f,D,PTCH,
+		          A,%.1f,D,ROLL\*00", // no check sum 
+		ToDeg(pitch), ToDeg(roll)); // convert to degree
+	return(nmea);
+
+}
+
+char print_accelerator_NMEA(void)
+{
+	//refer to WX series manual rev.1.000 p.33 $YXXDR-C
+	//accelerator x y z in /gravity
+	//initialize nmea sentence
+	char nmea[160];
+
+	snprintf(nmea, sizeof(nmea),
+		"\$YXXDR,A,%.3f,G,XACC,
+		          A,%.3f,G,YACC,
+			  A,%.3f,G,ZACC\*00", // no check sum 
+		accel_x/GRAVITY, accel_y/GRAVITY,accel_z/GRAVITY); // convert to degree
+	return(nmea);
+
+}
+
+
+char print_heading_NMEA(void)
+{
+	//refer to WX series manual rev.1.000 p.25 $HCTHS
+	//true heading and status
+	//initialize nmea sentence
+	char nmea[160];
+
+	snprintf(nmea, sizeof(nmea),
+		"\$HCTHS,%.2f,A\*00", // no check sum 
+		ToDeg(yaw));
+	return(nmea);
+
+}
+
+char print_LPS_NMEA(void)
+{
+	//refer to WX series manual rev.1.000 p.30 $YXXDR-A
+	//wind chill, heat index, barometric station pressure
+	//initialize nmea sentence
+	char nmea[160];
+	// for temeperature and pressure with IMU and I2C
+	float IMUpressure = ps.readPressureMillibars();
+	//float altitude = ps.pressureToAltitudeMeters(pressure);
+	float IMUtemperature = ps.readTemperatureC();
+
+	snprintf(nmea, sizeof(nmea),
+		"\$YXXDR,C,%.1f,C,WCHR,
+		          P,%.3f,B,STNP\*00", // no check sum 
+		IMUtemperature, IMUpressure/1000.0); // convert millibar to bar
+	return(nmea);
+}	
+
+
+long convert_to_dec(float x)
+{
+  return x*10000000;
+}
